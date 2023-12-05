@@ -1,3 +1,10 @@
+"""
+Test file to test Nelder Mead algorithm on easer, easy to follow (analytical) functions.
+All iterations can be plotted and exported to jpg files using the function create_animation()
+
+greetz Cedric
+"""
+
 from create_simplex_animation import create_animation
 import numpy as np
 from matplotlib import cm
@@ -9,10 +16,11 @@ plt.close('all')
 
 
 def evaluate_F_of_x(x, y):
-    return 0.01*(x**2) + 0.01*(y**2)
+    return 0.005*x**4+0.01*x**3-0.4*x**2+11+0.1*y**2
+    # return 0.01*(x**2) + 0.01*(y**2)
 
 
-NM_iter = 20
+NM_iter = 30
 load_simplex = False
 
 # Contraction, expansion,... coefficients:
@@ -28,8 +36,8 @@ if not load_simplex:
     Simplex = []
     N_p = 5
     for ii in range(N_p):
-        x_sp = 3+(np.random.uniform(0, 1))*10
-        y_sp =  10+np.random.uniform(0, 1)*5
+        x_sp = -2.5+(np.random.uniform(0, 1))*5
+        y_sp =  5+np.random.uniform(0, 1)*3
         simp_arr = np.array([x_sp, y_sp])
         Simplex.append(simp_arr*1)
         # np.savez("Simplex_test_np.npz", data = Simplex)
@@ -154,9 +162,10 @@ for iter_ in range(NM_iter):
 ### plot 3d figure
 # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 fig, ax = plt.subplots()
-X = np.arange(-15, 15, 0.25)
-Y = np.arange(-15, 15, 0.25)
+lim = 15
+X = np.arange(-10, 8, 0.1)
+Y = np.arange(-lim, lim, 0.1)
 X, Y = np.meshgrid(X, Y)
 Z = evaluate_F_of_x(X, Y)
-# create_animation(Simplex_list, X, Y, Z)
+create_animation(Simplex_list, X, Y, Z)
 print("Simplex animation is created.")

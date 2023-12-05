@@ -15,22 +15,18 @@ from sklearn.utils import shuffle
 # Computes test accuracy w.r.t. the HDC prototypes (centroids) and the biases found at training time
 def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
     Acc = 0
-    n_class = np.max(Y_test) + 1
     for i in range(Y_test.shape[0]):
-        received_HDC_vector = HDC_cont_test[i]
-        all_resp = np.zeros(n_class)
-        for cl in range(n_class):
-            final_HDC_centroid = centroids[cl]
+        # final_HDC_centroid = centroids[cl]
+        final_HDC_centroid = centroids
 
-            # compute LS-SVM response
-            response = np.inner(final_HDC_centroid, received_HDC_vector) + biases[cl] >= 0
+        # compute LS-SVM response
+        response = (np.inner(final_HDC_centroid, HDC_cont_test[i]) + biases) >= 0
 
-            all_resp[cl] = 1 if response else -1
+        # Give labels +1 and -1
+        all_resp = 1 if response else -1
 
-        class_idx = np.argmax(all_resp)
-        if class_idx == Y_test[i]:
+        if all_resp == Y_test[i]:  # I changed quite some stuff in this function compared to the original
             Acc += 1
-
     return Acc/Y_test.shape[0]
 
 
@@ -85,7 +81,7 @@ def lookup_generate(dim, n_keys, mode=1):
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     # Get the input-encoding and XOR-ing result: (own, faster parallel implementation)
     hv = grayscale_table[img, :]
-    container = hv*position_table
+    container = hv*position_table  # XOR
     img_hv = np.sum(container, axis=0)  # bundling without the cyclic step yet
     return img_hv
 
@@ -100,50 +96,50 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
     centroids_q = []
     biases_q = []
     biases = []
-    for cla in range(n_class):
-        # The steps below implement the LS-SVM training, check out the course notes, we are just implementing that
-        # Beta.alpha = L -> alpha (that we want)
-        Beta = np.zeros((N_train+1, N_train+1))  # LS-SVM regression matrix
-        # Fill Beta:
-        Omega = np.zeros((N_train, N_train))
-        for i in range(Omega.shape[0]):
-            for j in range(Omega.shape[1]):
-                Omega[i, j] = Y_train[i]*Y_train[j]*np.inner(HDC_cont_train[i], HDC_cont_train[j])
+    # for cla in range(n_class):
+    # The steps below implement the LS-SVM training, check out the course notes, we are just implementing that
+    # Beta.alpha = L -> alpha (that we want)
+    Beta = np.zeros((N_train+1, N_train+1))  # LS-SVM regression matrix
+    # Fill Beta:
+    Omega = np.zeros((N_train, N_train))
+    for i in range(Omega.shape[0]):
+        for j in range(Omega.shape[1]):
+            Omega[i, j] = Y_train[i]*Y_train[j]*np.inner(HDC_cont_train[i], HDC_cont_train[j])
 
-        Beta[0, 1:N_train+1] = Y_train
-        Beta[1:N_train+1, 0] = Y_train
-        Beta[1:N_train+1, 1:N_train+1] = Omega + (gamma**-1)*np.eye(N_train)
+    Beta[0, 1:N_train+1] = Y_train
+    Beta[1:N_train+1, 0] = Y_train
+    Beta[1:N_train+1, 1:N_train+1] = Omega + (gamma**-1)*np.eye(N_train)
 
-        # Target vector L:
-        L = np.ones(N_train+1)
-        L[0] = 0
-        # Solve the system of equations to get the vector alpha:
-        v = np.linalg.solve(Beta, L)
-        alpha = v[1:N_train+1]
+    # Target vector L:
+    L = np.ones(N_train+1)
+    L[0] = 0
+    # Solve the system of equations to get the vector alpha:
+    v = np.linalg.solve(Beta, L)
+    alpha = v[1:N_train+1]
 
-        # Get HDC prototype for class cla, still in floating point (µ)
-        # final_HDC_centroid = sum([Y_train[i]*alpha[i]*HDC_cont_train[i] for i in range(N_train)])
-        final_HDC_centroid = np.zeros(HDC_cont_train.shape[1])
-        for i in range(N_train):
-            final_HDC_centroid += Y_train[i]*alpha[i]*HDC_cont_train[i]
+    # Get HDC prototype for class cla, still in floating point (µ)
+    # final_HDC_centroid = sum([Y_train[i]*alpha[i]*HDC_cont_train[i] for i in range(N_train)])
+    final_HDC_centroid = np.zeros(HDC_cont_train.shape[1])
+    for i in range(N_train):
+        final_HDC_centroid += Y_train[i]*alpha[i]*HDC_cont_train[i]
 
-        r_min = -2**(D_b-1)
-        r_max = 2**(D_b-1)-1
-        fact = min(abs(r_min/final_HDC_centroid.min()), abs(r_max/final_HDC_centroid.max()))
+    r_min = -2**(D_b-1)
+    r_max = 2**(D_b-1)-1
+    fact = min(abs(r_min/final_HDC_centroid.min()), abs(r_max/final_HDC_centroid.max()))
 
-        final_HDC_centroid_q = final_HDC_centroid*fact
-        final_HDC_centroid_q = np.round(final_HDC_centroid_q)
+    final_HDC_centroid_q = final_HDC_centroid*fact
+    final_HDC_centroid_q = np.round(final_HDC_centroid_q)
 
-        if np.max(np.abs(final_HDC_centroid)) == 0:
-            print("Kernel matrix badly conditionned! Ignoring...")
-            centroids_q.append(np.ones(final_HDC_centroid_q.shape))  # trying to manage badly conditioned matrices, do not touch
-            biases_q.append(10000)
-        else:
-            centroids_q.append(final_HDC_centroid_q*1)
-            biases_q.append(alpha[0]*fact)
+    if np.max(np.abs(final_HDC_centroid)) == 0:
+        print("Kernel matrix badly conditionned! Ignoring...")
+        centroids_q.append(np.ones(final_HDC_centroid_q.shape))  # trying to manage badly conditioned matrices, do not touch
+        biases_q.append(10000)
+    else:
+        centroids_q.append(final_HDC_centroid_q*1)
+        biases_q.append(alpha[0]*fact)
 
-        centroids.append(final_HDC_centroid*1)
-        biases.append(alpha[0])
+    centroids.append(final_HDC_centroid*1)
+    biases.append(alpha[0])
 
     return centroids, biases, centroids_q, biases_q
 
@@ -175,10 +171,11 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         # Ternary thresholding with threshold alpha_sp:
         HDC_cont_train_cpy = vthreshold(HDC_cont_train_cpy, alpha_sp, B_cnt)
 
-        Y_train = 2*LABELS[:N_train] - 3  # Labels have to be {-1, 1}
+        # Y_train = 2*LABELS[:N_train] - 3  # Labels have to be {-1, 1}
+        Y_train = LABELS[:N_train]  # Labels have to be {-1, 1}
         Y_train = Y_train.astype(int)
         
-        # Train the HDC system to find the prototype hypervectors, _q meqns quantized
+        # Train the HDC system to find the prototype hypervectors, _q means quantized
         centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train_cpy, gamma, D_b)
         
         # Do the same encoding steps with the test set
@@ -193,7 +190,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         # Ternary thresholding with threshold alpha_sp:
         HDC_cont_test_cpy = vthreshold(HDC_cont_test_cpy, alpha_sp, B_cnt)
         
-        Y_test = LABELS[N_train:] - 1
+        Y_test = LABELS[N_train:]
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
@@ -201,7 +198,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
-        local_avg[trial_] = lambda_1 * Acc + lambda_2 * SPH  # Cost F(x) is defined as 1 - this quantity
+        local_avg[trial_] = lambda_1 * Acc + lambda_2 * SPH  # Cost F(x) is defined as 1 - (this quantity)
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
         

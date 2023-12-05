@@ -7,7 +7,7 @@ def create_animation(simplex_list, X, Y, Z):
         fig, ax = plt.subplots()
 
         # ax.computed_zorder = False
-        levels = np.linspace(Z.min(), Z.max(), 15)
+        levels = np.linspace(Z.min(), Z.max(), 30)
         # plot the surface of F(x)
         # surf = ax.plot_surface(X, Y, Z, cmap='viridis',linewidth=0, antialiased=False)
         ax.contourf(X, Y, Z, levels=levels)

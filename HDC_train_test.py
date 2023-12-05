@@ -1,32 +1,14 @@
-"""
-Design of a Hyperdimensional Computing Circuit for Bio-signal Classification via Nelder-Mead optimization
-and LS-SVM Training.
-
-*MAIN FILE*
-
-Computer-Aided IC Design (B-KUL-H05D7A)
-
-ir. Ali Safa, ir. Sergio Massaioli, Prof. Georges Gielen (MICAS-IMEC-KU Leuven)
-
-(Author: A. Safa)
-"""
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.utils import shuffle
 from HDC_library import lookup_generate, encode_HDC_RFF, evaluate_F_of_x
-from os import mkdir
-plt.close('all')
+from sklearn.utils import shuffle
 
-"""
-1) HDC_RFF parameters: DO NOT TOUCH
-"""
 ##################################   
 # Replace the path "WISCONSIN/data.csv" with wathever path you have. Note, on Windows, you must put the "r" in r'C:etc..'
 dataset_path = 'WISCONSIN/data.csv' 
 ##################################   
 imgsize_vector = 30  # Each input vector has 30 features
 n_class = 2
-D_b = 8  # We target 4-bit HDC prototypes
+D_b = 4  # We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256  # The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 100  # HDC hypervector dimension
@@ -38,7 +20,7 @@ N_fine = int(N_tradeof_points*0.4)  # Number of tradeoff points in the "fine-gra
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
 lambda_sp = np.concatenate((lambda_fine, np.linspace(-1, -0.2, N_fine//2), np.linspace(0.2, 1, N_fine//2)))
 N_tradeof_points = lambda_sp.shape[0]
-
+    
 """
 2) Load dataset: if it fails, replace the path "WISCONSIN/data.csv" with wathever 
 path you have. Note, on Windows, you must put the "r" in r'C:etc..'
@@ -67,13 +49,13 @@ for i in range(X.shape[0]):
     if i % 100 == 0:
         print(str(i) + "/" + str(X.shape[0]))
     HDC_cont_all[i, :] = encode_HDC_RFF(np.round((maxval - 1) * X[i, :]).astype(int), position_table, grayscale_table, D_HDC)
-
+ 
 print("HDC bundling finished...")
 
 """
 4) Nelder-Mead circuit optimization and HDC training
 """
-##################################
+################################## 
 # Nelder-Mead parameters
 NM_iter = 16  # Maximum number of iterations
 STD_EPS = 0.002  # Threshold for early-stopping on standard deviation of the Simplex
@@ -82,7 +64,7 @@ alpha_simp = 1 * 0.5
 gamma_simp = 2 * 0.6
 rho_simp = 0.5
 sigma_simp = 0.5
-##################################
+################################## 
 
 ACCS = np.zeros(N_tradeof_points)
 SPARSES = np.zeros(N_tradeof_points)
@@ -226,6 +208,7 @@ for optimalpoint in range(N_tradeof_points):
                     # 4) Shrinking
                     for rep in range(1, Simplex.shape[0]):
                         Simplex[rep] = Simplex[0] + sigma_simp*(Simplex[rep] - Simplex[0])
+
 
 
     ##################################

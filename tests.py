@@ -2,6 +2,9 @@ from HDC_library import lookup_generate, encode_HDC_RFF, vthreshold
 import numpy as np
 np.random.seed(seed=69) # nice
 
+"""
+Unit test 1
+"""
 # ## Lookup generate
 dim = 100
 n_keys = 3 # size of imput vector
@@ -49,9 +52,14 @@ assert(vthreshold(150, t, B) == 0)
 assert(vthreshold(200, t, B) == 1)
 assert(vthreshold(250, t, B) == 1)
 
-
+"""
+Unit test 2
+"""
 # Training HDC encoder
 ## TODO
-a = 1
 
-print("All tests finished succesfully!")
+"""
+Unit test 3: check test_nelder_mead.py
+"""
+
+print("All tests finished succesfully, nice!")
