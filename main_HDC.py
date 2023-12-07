@@ -26,13 +26,13 @@ dataset_path = 'WISCONSIN/data.csv'
 ##################################   
 imgsize_vector = 30  # Each input vector has 30 features
 n_class = 2
-D_b = 8  # We target 4-bit HDC prototypes
+D_b = 4  # We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256  # The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 100  # HDC hypervector dimension
 portion = 0.6  # We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1  # Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 35  # Number of tradeoff points - use 100 - original: 40
+N_tradeof_points = 30  # Number of tradeoff points - use 100 - original: 40
 N_fine = int(N_tradeof_points*0.4)  # Number of tradeoff points in the "fine-grain" region - use 30
 # Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
@@ -50,7 +50,7 @@ LABELS[LABELS == 'M'] = -1
 LABELS[LABELS == 'B'] = 1
 LABELS = LABELS.astype(float)
 X = X.T / np.max(X, axis=1)
-X, LABELS = shuffle(X.T, LABELS)
+X, LABELS = shuffle(X.T, LABELS)  # Shuffle data set once in beginning
 imgsize_vector = X.shape[1]
 N_train = int(X.shape[0]*portion)
 
@@ -75,7 +75,7 @@ print("HDC bundling finished...")
 """
 ##################################
 # Nelder-Mead parameters
-NM_iter = 16  # Maximum number of iterations
+NM_iter = 20  # Maximum number of iterations
 STD_EPS = 0.002  # Threshold for early-stopping on standard deviation of the Simplex
 # Contraction, expansion,... coefficients:
 alpha_simp = 1 * 0.5
@@ -86,7 +86,7 @@ sigma_simp = 0.5
 
 ACCS = np.zeros(N_tradeof_points)
 SPARSES = np.zeros(N_tradeof_points)
-load_simplex = True  # Keep it to true in order to have somewhat predictive results
+load_simplex = False  # Keep it to true in order to have somewhat predictive results
 for optimalpoint in range(N_tradeof_points):
     print("Progress: " + str(optimalpoint+1) + "/" + str(N_tradeof_points))
     # F(x) = 1 - (lambda_1 * Accuracy + lambda_2 * Sparsity) : TO BE MINIMIZED by Nelder-Mead

@@ -157,15 +157,16 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
     local_avgre = np.zeros(Nbr_of_trials)
     local_sparse = np.zeros(Nbr_of_trials)
     # Estimate F(x) over "Nbr_of_trials" trials
-    for trial_ in range(Nbr_of_trials): 
-        HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS)  # Shuffle dataset for random train-test split
-            
+    for trial_ in range(Nbr_of_trials):
+        # Remove for less fuzzy results
+        # HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS)  # Shuffle dataset for random train-test split
+
         HDC_cont_train_ = HDC_cont_all[:N_train, :]  # Take training set
         HDC_cont_train_cpy = HDC_cont_train_ * 1
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
-        HDC_cont_train_cpy += bias_
         HDC_cont_train_cpy *= beta_
+        HDC_cont_train_cpy += bias_
         HDC_cont_train_cpy = np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
 
         # Ternary thresholding with threshold alpha_sp:

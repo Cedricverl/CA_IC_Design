@@ -1,4 +1,5 @@
 """
+Unit test 3:
 Test file to test Nelder Mead algorithm on easer, easy to follow (analytical) functions.
 All iterations can be plotted and exported to jpg files using the function create_animation()
 
@@ -24,8 +25,8 @@ NM_iter = 30
 load_simplex = False
 
 # Contraction, expansion,... coefficients:
-alpha_simp = 1 # Reflection
-gamma_simp = 2 # Expansion
+alpha_simp = 1  # Reflection
+gamma_simp = 2  # Expansion
 rho_simp = 0.5  # Contraction
 sigma_simp = 0.5  # Shrink
 
