@@ -43,9 +43,9 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
 #
 # vthreshold = np.vectorize(threshold)
 # MAKE IT FAST AS FUCKBOI
-def vthreshold(x, t, B_cnt):
-    x = x - 2**(B_cnt-1)
-    return np.where(x > t, 1, np.where(abs(x) <= t, 0, -1))
+# def vthreshold(x, t, B_cnt):
+#     x = x - 2**(B_cnt-1)
+#     return np.where(x > t, 1, np.where(abs(x) <= t, 0, -1)).astype(np.int8)
 
 
 # Generates random binary matrices of -1 and +1
@@ -146,7 +146,7 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
     fact = min(abs(r_min/final_HDC_centroid.min()), abs(r_max/final_HDC_centroid.max()))
 
     final_HDC_centroid_q = final_HDC_centroid*fact
-    final_HDC_centroid_q = np.round(final_HDC_centroid_q)
+    final_HDC_centroid_q = np.round(final_HDC_centroid_q).astype(np.int8)
 
     if np.max(np.abs(final_HDC_centroid)) == 0:
         print("Kernel matrix badly conditionned! Ignoring...")
@@ -177,7 +177,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_, bias_, gamma, alpha_sp, 
     local_avg = None
     local_avgre = None
     loal_sparse = None
-    t = 2**B_cnt-1
+    t_mod = np.uint8(2**B_cnt-1)
     # Estimate F(x) over "Nbr_of_trials" trials
     for trial_ in range(Nbr_of_trials):
         # Removed for less fuzzy results
@@ -187,15 +187,16 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_, bias_, gamma, alpha_sp, 
         HDC_cont_train_cpy = HDC_cont_train_ * 1
 
         # Apply cyclic accumulation with biases and accumulation speed beta_
-        HDC_cont_train_cpy *= beta_
-        HDC_cont_train_cpy = (HDC_cont_train_cpy + bias_).astype(int)
+        HDC_cont_train_cpy = (HDC_cont_train_cpy*beta_).astype(np.int16)
+        HDC_cont_train_cpy += bias_
         # HDC_cont_train_cpy = np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
-        HDC_cont_train_cpy &= t # equivalent to np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
-
+        # HDC_cont_train_cpy &= t  # equivalent to np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
+        HDC_cont_train_cpy = np.mod(HDC_cont_train_cpy, t_mod)
 
         # Ternary thresholding with threshold alpha_sp:
-        HDC_cont_train_cpy = vthreshold(HDC_cont_train_cpy, alpha_sp, B_cnt)
-
+        # HDC_cont_train_cpy = vthreshold(HDC_cont_train_cpy, alpha_sp, B_cnt)
+        x = HDC_cont_train_cpy - 2**(B_cnt-1)
+        HDC_cont_train_cpy = np.where(x > alpha_sp, 1, np.where(abs(x) <= alpha_sp, 0, -1)).astype(np.int8)
         # Y_train = LABELS[:N_train]  # Labels have to be {-1, 1}
         # Y_train = Y_train.astype(int)
 
@@ -207,14 +208,17 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_, bias_, gamma, alpha_sp, 
         HDC_cont_test_cpy = HDC_cont_test_ * 1
 
         # Apply cyclic accumulation with biases and accumulation speed beta_
-        HDC_cont_test_cpy *= beta_
-        HDC_cont_test_cpy = (HDC_cont_test_cpy+bias_).astype(int)
-        # HDC_cont_test_cpy = np.mod(HDC_cont_test_cpy, 2**B_cnt-1)
-        HDC_cont_train_cpy &= t # equivalent to np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
+        # HDC_cont_test_cpy *= beta_
+        # HDC_cont_test_cpy = (HDC_cont_test_cpy+bias_).astype(np.uint8)
+        HDC_cont_test_cpy = (HDC_cont_test_cpy*beta_).astype(np.int16)
+        HDC_cont_test_cpy += bias_
+        HDC_cont_test_cpy = np.mod(HDC_cont_test_cpy, t_mod)
+        # HDC_cont_test_cpy &= t_mod  # equivalent to np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
 
         # Ternary thresholding with threshold alpha_sp:
-        HDC_cont_test_cpy = vthreshold(HDC_cont_test_cpy, alpha_sp, B_cnt)
-        
+        # HDC_cont_test_cpy = vthreshold(HDC_cont_test_cpy, alpha_sp, B_cnt)
+        x = HDC_cont_test_cpy - 2**(B_cnt-1)
+        HDC_cont_test_cpy = np.where(x > alpha_sp, 1, np.where(abs(x) <= alpha_sp, 0, -1)).astype(np.int8)
         # Y_test = LABELS[N_train:]
         # Y_test = Y_test.astype(int)
         

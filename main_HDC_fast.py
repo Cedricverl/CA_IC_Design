@@ -17,7 +17,7 @@ from HDC_library_fast import lookup_generate, encode_HDC_RFF, evaluate_F_of_x
 from os import mkdir
 from datetime import datetime
 from time import time
-import threading
+# import threading
 import concurrent.futures
 plt.close('all')
 
@@ -72,12 +72,12 @@ grayscale_table = lookup_generate(D_HDC, maxval, mode=1)  # Input encoding LUT
 position_table = lookup_generate(D_HDC, imgsize_vector, mode=0)  # weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC))  # Will contain all "bundled" HDC vectors
 
-bias_ = np.random.randint(maxval, size=D_HDC).astype(np.int8)  # generate the random biases once
+bias_ = np.random.randint(maxval, size=D_HDC).astype(np.uint8)  # generate the random biases once
 
 for i in range(X.shape[0]):
     if i % 100 == 0:
         print(str(i) + "/" + str(X.shape[0]))
-    HDC_cont_all[i, :] = encode_HDC_RFF(np.round((maxval - 1) * X[i, :]).astype(int), position_table, grayscale_table, D_HDC)
+    HDC_cont_all[i, :] = encode_HDC_RFF(np.round((maxval - 1) * X[i, :]).astype(int), position_table, grayscale_table, D_HDC).astype(np.int8)
 
 print("HDC bundling finished...")
 
@@ -86,7 +86,7 @@ print("HDC bundling finished...")
 """
 ##################################
 # Nelder-Mead parameters
-NM_iter = 20  # Maximum number of iterations
+NM_iter = 25  # Maximum number of iterations
 STD_EPS = 0.002  # Threshold for early-stopping on standard deviation of the Simplex
 # Contraction, expansion,... coefficients:
 alpha_simp = 1 * 0.5
@@ -256,6 +256,7 @@ for optimalpoint in range(N_tradeof_points):
     Simplex = Simplex[idx, :]
     ACCS[optimalpoint] = Accs[0]
     SPARSES[optimalpoint] = Sparsities[0]
+    print("ACC:", Accs[0])
     ##################################
 
 
