@@ -120,15 +120,18 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
     # Omega = np.multiply(np.matmul(HDC_cont_train, HDC_cont_train.T), Y_train_mult)
     # Omega = np.multiply(Omega, one_matrix)
 
-    Beta[0, 1:N_train+1] = Y_train
-    Beta[1:N_train+1, 0] = Y_train
-    Beta[1:N_train+1, 1:N_train+1] = Omega + (gamma**-1)*np.eye(N_train)
+    # Beta[0, 1:N_train+1] = Y_train
+    # Beta[1:N_train+1, 0] = Y_train
+    # Beta[1:N_train+1, 1:N_train+1] = Omega + (gamma**-1)*np.eye(N_train)
+    Beta[0, 1:] = Y_train
+    Beta[1:, 0] = Y_train
+    Beta[1:, 1:] = Omega + (gamma**-1)*np.eye(N_train)
     # Target vector L:
     L = np.ones(N_train+1)
     L[0] = 0
     # Solve the system of equations to get the vector alpha:
     v = np.linalg.solve(Beta, L)
-    alpha = v[1:N_train+1]
+    alpha = v[1:]
 
     # Get HDC prototype for class cla, still in floating point (µ)
     # final_HDC_centroid = sum([Y_train[i]*alpha[i]*HDC_cont_train[i] for i in range(N_train)])
@@ -174,18 +177,21 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_, bias_, gamma, alpha_sp, 
     local_avg = None
     local_avgre = None
     loal_sparse = None
+    t = 2**B_cnt-1
     # Estimate F(x) over "Nbr_of_trials" trials
     for trial_ in range(Nbr_of_trials):
         # Removed for less fuzzy results
         # HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS)  # Shuffle dataset for random train-test split
 
-        HDC_cont_train_ = HDC_cont_all[:N_train, :]  # Take training set
+        HDC_cont_train_ = HDC_cont_all[:N_train]  # Take training set
         HDC_cont_train_cpy = HDC_cont_train_ * 1
 
         # Apply cyclic accumulation with biases and accumulation speed beta_
         HDC_cont_train_cpy *= beta_
-        HDC_cont_train_cpy += bias_
-        HDC_cont_train_cpy = np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
+        HDC_cont_train_cpy = (HDC_cont_train_cpy + bias_).astype(int)
+        # HDC_cont_train_cpy = np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
+        HDC_cont_train_cpy &= t # equivalent to np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
+
 
         # Ternary thresholding with threshold alpha_sp:
         HDC_cont_train_cpy = vthreshold(HDC_cont_train_cpy, alpha_sp, B_cnt)
@@ -197,13 +203,14 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_, bias_, gamma, alpha_sp, 
         centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train_cpy, gamma, D_b)
         
         # Do the same encoding steps with the test set
-        HDC_cont_test_ = HDC_cont_all[N_train:, :]
+        HDC_cont_test_ = HDC_cont_all[N_train:]
         HDC_cont_test_cpy = HDC_cont_test_ * 1
 
         # Apply cyclic accumulation with biases and accumulation speed beta_
         HDC_cont_test_cpy *= beta_
-        HDC_cont_test_cpy += bias_
-        HDC_cont_test_cpy = np.mod(HDC_cont_test_cpy, 2**B_cnt-1)
+        HDC_cont_test_cpy = (HDC_cont_test_cpy+bias_).astype(int)
+        # HDC_cont_test_cpy = np.mod(HDC_cont_test_cpy, 2**B_cnt-1)
+        HDC_cont_train_cpy &= t # equivalent to np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
 
         # Ternary thresholding with threshold alpha_sp:
         HDC_cont_test_cpy = vthreshold(HDC_cont_test_cpy, alpha_sp, B_cnt)
