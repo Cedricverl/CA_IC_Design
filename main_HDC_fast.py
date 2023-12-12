@@ -40,7 +40,7 @@ N_tradeof_points = 50  # Number of tradeoff points - use 100 - original: 40
 N_fine = int(N_tradeof_points*0.4)  # Number of tradeoff points in the "fine-grain" region - use 30
 # Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
-lambda_sp = np.concatenate((lambda_fine, np.linspace(-1, -0.2, N_fine//2), np.linspace(0.2, 1, N_fine//2)))
+lambda_sp = np.concatenate((np.linspace(-1, -0.2, N_fine//2-1), lambda_fine, np.linspace(0.2, 1, N_fine//2)))
 N_tradeof_points = lambda_sp.shape[0]
 
 """
@@ -97,7 +97,7 @@ sigma_simp = 0.5
 
 ACCS = np.zeros(N_tradeof_points)
 SPARSES = np.zeros(N_tradeof_points)
-load_simplex = False  # Keep it to true in order to have somewhat predictive results
+load_simplex = True  # Keep it to true in order to have somewhat predictive results
 
 
 # def get_optimal_point(optimalpoint):

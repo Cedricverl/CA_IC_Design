@@ -31,17 +31,21 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
     return Acc/Y_test.shape[0]
 
 
-def threshold(x, t, B_cnt):
-    x = x-2**(B_cnt-1)
-    if x > t:
-        return 1
-    elif abs(x) <= t:
-        return 0
-    else:
-        return -1
-
-
-vthreshold = np.vectorize(threshold)
+# def threshold(x, t, B_cnt):
+#     x = x-2**(B_cnt-1)
+#     if x > t:
+#         return 1
+#     elif abs(x) <= t:
+#         return 0
+#     else:
+#         return -1
+#
+#
+# vthreshold = np.vectorize(threshold)
+# MAKE IT FAST AS FUCKBOI
+def vthreshold(x, t, B_cnt):
+    x = x - 2**(B_cnt-1)
+    return np.where(x > t, 1, np.where(abs(x) <= t, 0, -1))
 
 
 # Generates random binary matrices of -1 and +1
