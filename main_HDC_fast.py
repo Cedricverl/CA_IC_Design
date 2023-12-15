@@ -36,11 +36,11 @@ maxval = 256  # The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 1000  # HDC hypervector dimension
 portion = 0.6  # We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1  # Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 50  # Number of tradeoff points - use 100 - original: 40
+N_tradeof_points = 30  # Number of tradeoff points - use 100 - original: 40
 N_fine = int(N_tradeof_points*0.4)  # Number of tradeoff points in the "fine-grain" region - use 30
 # Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
-lambda_sp = np.concatenate((np.linspace(-1, -0.2, N_fine//2-1), lambda_fine, np.linspace(0.2, 1, N_fine//2)))
+lambda_sp = np.concatenate((np.linspace(-1, -0.2, N_fine//2), lambda_fine, np.linspace(0.2, 1, N_fine//2)))
 N_tradeof_points = lambda_sp.shape[0]
 
 """
@@ -59,9 +59,9 @@ imgsize_vector = X.shape[1]
 N_train = int(X.shape[0]*portion)
 
 Y_train = LABELS[:N_train]  # Labels have to be {-1, 1}
-Y_train = Y_train.astype(np.int8)
+# Y_train = Y_train.astype(np.int8)
 Y_test = LABELS[N_train:]
-Y_test = Y_test.astype(np.int8)
+# Y_test = Y_test.astype(np.int8)
 
 Y_train_mult = np.array([Y_train*i for i in Y_train])
 
@@ -72,12 +72,12 @@ grayscale_table = lookup_generate(D_HDC, maxval, mode=1)  # Input encoding LUT
 position_table = lookup_generate(D_HDC, imgsize_vector, mode=0)  # weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC))  # Will contain all "bundled" HDC vectors
 
-bias_ = np.random.randint(maxval, size=D_HDC).astype(np.uint8)  # generate the random biases once
+bias_ = np.random.randint(maxval, size=D_HDC)  # generate the random biases once
 
 for i in range(X.shape[0]):
     if i % 100 == 0:
         print(str(i) + "/" + str(X.shape[0]))
-    HDC_cont_all[i, :] = encode_HDC_RFF(np.round((maxval - 1) * X[i, :]).astype(int), position_table, grayscale_table, D_HDC).astype(np.int8)
+    HDC_cont_all[i, :] = encode_HDC_RFF(np.round((maxval - 1) * X[i, :]).astype(int), position_table, grayscale_table, D_HDC)
 
 print("HDC bundling finished...")
 
@@ -86,11 +86,11 @@ print("HDC bundling finished...")
 """
 ##################################
 # Nelder-Mead parameters
-NM_iter = 25  # Maximum number of iterations
+NM_iter = 100  # Maximum number of iterations
 STD_EPS = 0.002  # Threshold for early-stopping on standard deviation of the Simplex
 # Contraction, expansion,... coefficients:
-alpha_simp = 1# * 0.5
-gamma_simp = 2# * 0.6
+alpha_simp = 1 * 0.5
+gamma_simp = 2 * 0.6
 rho_simp = 0.5
 sigma_simp = 0.5
 ##################################
@@ -145,7 +145,7 @@ for optimalpoint in range(N_tradeof_points):
         Accs.append(np.mean(local_avgre))
         Sparsities.append(np.mean(local_sparse))
     print("Initialisation complete")
-        ##################################
+    ##################################
 
     # Transform lists to numpy array:
     F_of_x = np.array(F_of_x)
@@ -221,12 +221,14 @@ for optimalpoint in range(N_tradeof_points):
 
             else:  # F_curr >= F_of_x[-2]
                 # 4) Contraction x_c
+                flag = None
                 if F_curr < F_of_x[-1]:
                     x_c = x_0 + rho_simp*(x_r - x_0)
-
-                elif F_curr >= F_of_x[-1]:
+                    flag = 0
+                # elif F_curr >= F_of_x[-1]:
+                else:
                     x_c = x_0 + rho_simp*(Simplex[-1] - x_0)
-
+                    flag = 1
                 # Evaluate cost of contracted point x_e
                 gamma_c = x_c[0]  # Regularization hyperparameter
                 alpha_sp_c = x_c[1]  # Threshold of accumulators
@@ -234,7 +236,7 @@ for optimalpoint in range(N_tradeof_points):
                 local_avg_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_c, bias_, gamma_c, alpha_sp_c, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
                 F_c = 1-local_avg_c
 
-                if F_c < F_curr or F_c < F_of_x[-1]:
+                if (F_c < F_curr and flag == 0) or (F_c < F_of_x[-1] and flag == 1):
                     F_of_x[-1] = F_c
                     Simplex[-1] = x_c
                     Accs[-1] = acc_c
@@ -242,7 +244,15 @@ for optimalpoint in range(N_tradeof_points):
                 else:
                     # 4) Shrinking
                     for rep in range(1, Simplex.shape[0]):
-                        Simplex[rep] = Simplex[0] + sigma_simp*(Simplex[rep] - Simplex[0])
+                        simplex_c = Simplex[0] + sigma_simp*(Simplex[rep] - Simplex[0])
+                        Simplex[rep] = simplex_c
+                        gamma_c = simplex_c[0]  # Regularization hyperparameter
+                        alpha_sp_c = simplex_c[1]  # Threshold of accumulators
+                        beta_c = simplex_c[2]  # incrementation step of accumulators
+                        local_avg_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_c, bias_, gamma_c, alpha_sp_c, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
+                        F_of_x[rep] = 1-local_avg_c
+                        Accs[rep] = acc_c
+                        Sparsities[rep] = sparse_c
         # print("Elapsed time Nelder Mead:", time()-start_time)
     delta = time() - start_time
     print("Elapsed time Nelder Mead:", delta)
