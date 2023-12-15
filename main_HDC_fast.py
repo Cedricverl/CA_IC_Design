@@ -89,8 +89,8 @@ print("HDC bundling finished...")
 NM_iter = 100  # Maximum number of iterations
 STD_EPS = 0.002  # Threshold for early-stopping on standard deviation of the Simplex
 # Contraction, expansion,... coefficients:
-alpha_simp = 1 * 0.5
-gamma_simp = 2 * 0.6
+alpha_simp = 1 #* 0.5
+gamma_simp = 2 #* 0.6
 rho_simp = 0.5
 sigma_simp = 0.5
 ##################################
@@ -174,10 +174,9 @@ for optimalpoint in range(N_tradeof_points):
 
         # 2) average simplex x_0
         x_0 = np.average(Simplex[:-1], axis=0)
-        x_n_plus_1 = Simplex[-1]
 
         # 3) Reflexion x_r
-        x_r = x_0 + alpha_simp*(x_0-x_n_plus_1)
+        x_r = x_0 + alpha_simp*(x_0-Simplex[-1])
 
         # Evaluate cost of reflected point x_r
         gamma_x_r = x_r[0]  # Regularization hyperparameter
@@ -185,74 +184,77 @@ for optimalpoint in range(N_tradeof_points):
         beta_x_r = x_r[2]  # incrementation step of accumulators
 
         local_avg_x, acc_curr, sparse_curr = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_x_r, bias_, gamma_x_r, alpha_sp_x_r, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
-        F_curr = 1-local_avg_x
+        F_r = 1 - local_avg_x
 
-        if F_of_x[0] <= F_curr < F_of_x[-2]:
-            F_of_x[-1] = F_curr
+        if F_of_x[0] <= F_r < F_of_x[-2]:
+            F_of_x[-1] = F_r
             Simplex[-1] = x_r
             Accs[-1] = acc_curr
             Sparsities[-1] = sparse_curr
-            rest = False
-        else:
-            rest = True
+            continue
 
-        if rest:
-            # 4) Expansion x_e
-            if F_curr < F_of_x[0]:  # Reflected point is best point so far
-                x_e = x_0 + gamma_simp*(x_r-x_0)  # Expanded point
+        #  Expansion x_e
+        if F_r < F_of_x[0]:  # Reflected point is best point so far
+            x_e = x_0 + gamma_simp*(x_r-x_0)  # Expanded point
 
-                # Evaluate cost of reflected point x_e
-                gamma_exp = x_e[0]  # Regularization hyperparameter
-                alpha_sp_exp = x_e[1]  # Threshold of accumulators
-                beta_exp = x_e[2]  # incrementation step of accumulators
-                local_avg_exp, acc_exp, sparse_exp = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_exp, bias_, gamma_exp, alpha_sp_exp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
-                F_exp = 1-local_avg_exp
+            # Evaluate cost of reflected point x_e
+            gamma_exp = x_e[0]  # Regularization hyperparameter
+            alpha_sp_exp = x_e[1]  # Threshold of accumulators
+            beta_exp = x_e[2]  # incrementation step of accumulators
+            local_avg_exp, acc_exp, sparse_exp = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_exp, bias_, gamma_exp, alpha_sp_exp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
+            F_e = 1 - local_avg_exp
 
-                if F_exp < F_curr:
-                    F_of_x[-1] = F_exp
-                    Simplex[-1] = x_e
-                    Accs[-1] = acc_exp
-                    Sparsities[-1] = sparse_exp
-                else:
-                    F_of_x[-1] = F_curr
-                    Simplex[-1] = x_r
-                    Accs[-1] = acc_curr
-                    Sparsities[-1] = sparse_curr
+            if F_e < F_r:
+                F_of_x[-1] = F_e
+                Simplex[-1] = x_e
+                Accs[-1] = acc_exp
+                Sparsities[-1] = sparse_exp
+                continue
+            else:
+                F_of_x[-1] = F_r
+                Simplex[-1] = x_r
+                Accs[-1] = acc_curr
+                Sparsities[-1] = sparse_curr
+                continue
 
-            else:  # F_curr >= F_of_x[-2]
-                # 4) Contraction x_c
-                flag = None
-                if F_curr < F_of_x[-1]:
-                    x_c = x_0 + rho_simp*(x_r - x_0)
-                    flag = 0
-                # elif F_curr >= F_of_x[-1]:
-                else:
-                    x_c = x_0 + rho_simp*(Simplex[-1] - x_0)
-                    flag = 1
-                # Evaluate cost of contracted point x_e
-                gamma_c = x_c[0]  # Regularization hyperparameter
-                alpha_sp_c = x_c[1]  # Threshold of accumulators
-                beta_c = x_c[2]  # incrementation step of accumulators
-                local_avg_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_c, bias_, gamma_c, alpha_sp_c, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
-                F_c = 1-local_avg_c
+      # F_curr >= F_of_x[-2]
+        # 4) Contraction x_c
+        flag = None
+        x_c = None
+        if F_r < F_of_x[-1]:
+            x_c = x_0 + rho_simp*(x_r - x_0)
+            flag = 0
+        # elif F_curr >= F_of_x[-1]:
+        if F_r >= F_of_x[-1]:
+            x_c = x_0 + rho_simp*(Simplex[-1] - x_0)
+            flag = 1
+        # Evaluate cost of contracted point x_e
+        gamma_c = x_c[0]  # Regularization hyperparameter
+        alpha_sp_c = x_c[1]  # Threshold of accumulators
+        beta_c = x_c[2]  # incrementation step of accumulators
+        local_avg_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_c, bias_, gamma_c, alpha_sp_c, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
+        F_c = 1-local_avg_c
 
-                if (F_c < F_curr and flag == 0) or (F_c < F_of_x[-1] and flag == 1):
-                    F_of_x[-1] = F_c
-                    Simplex[-1] = x_c
-                    Accs[-1] = acc_c
-                    Sparsities[-1] = sparse_c
-                else:
-                    # 4) Shrinking
-                    for rep in range(1, Simplex.shape[0]):
-                        simplex_c = Simplex[0] + sigma_simp*(Simplex[rep] - Simplex[0])
-                        Simplex[rep] = simplex_c
-                        gamma_c = simplex_c[0]  # Regularization hyperparameter
-                        alpha_sp_c = simplex_c[1]  # Threshold of accumulators
-                        beta_c = simplex_c[2]  # incrementation step of accumulators
-                        local_avg_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_c, bias_, gamma_c, alpha_sp_c, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
-                        F_of_x[rep] = 1-local_avg_c
-                        Accs[rep] = acc_c
-                        Sparsities[rep] = sparse_c
+        if (F_c < F_r and flag == 0) or (F_c < F_of_x[-1] and flag == 1):
+            F_of_x[-1] = F_c
+            Simplex[-1] = x_c
+            Accs[-1] = acc_c
+            Sparsities[-1] = sparse_c
+            continue
+
+        # 4) Shrinking
+        x1 = Simplex[0]
+        for rep in range(1, Simplex.shape[0]):
+            simplex_s = x1 + sigma_simp*(Simplex[rep] - x1)
+            Simplex[rep] = simplex_s
+
+            gamma_s = simplex_s[0]  # Regularization hyperparameter
+            alpha_sp_s = simplex_s[1]  # Threshold of accumulators
+            beta_s = simplex_s[2]  # incrementation step of accumulators
+            local_avg_s, acc_s, sparse_s = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_s, bias_, gamma_s, alpha_sp_s, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
+            F_of_x[rep] = 1-local_avg_s
+            Accs[rep] = acc_s
+            Sparsities[rep] = sparse_s
         # print("Elapsed time Nelder Mead:", time()-start_time)
     delta = time() - start_time
     print("Elapsed time Nelder Mead:", delta)
