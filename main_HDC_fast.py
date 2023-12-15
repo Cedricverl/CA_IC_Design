@@ -33,7 +33,7 @@ n_class = 2
 D_b = 4  # We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256  # The input features will be mapped from 0 to 255 (8-bit)
-D_HDC = 1000  # HDC hypervector dimension
+D_HDC = 100  # HDC hypervector dimension
 portion = 0.6  # We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1  # Test accuracy averaged over Nbr_of_trials runs
 N_tradeof_points = 30  # Number of tradeoff points - use 100 - original: 40
@@ -86,11 +86,11 @@ print("HDC bundling finished...")
 """
 ##################################
 # Nelder-Mead parameters
-NM_iter = 100  # Maximum number of iterations
+NM_iter = 150  # Maximum number of iterations
 STD_EPS = 0.002  # Threshold for early-stopping on standard deviation of the Simplex
 # Contraction, expansion,... coefficients:
-alpha_simp = 1 #* 0.5
-gamma_simp = 2 #* 0.6
+alpha_simp = 1 * 0.5
+gamma_simp = 2 * 0.6
 rho_simp = 0.5
 sigma_simp = 0.5
 ##################################
@@ -228,6 +228,7 @@ for optimalpoint in range(N_tradeof_points):
         if F_r >= F_of_x[-1]:
             x_c = x_0 + rho_simp*(Simplex[-1] - x_0)
             flag = 1
+
         # Evaluate cost of contracted point x_e
         gamma_c = x_c[0]  # Regularization hyperparameter
         alpha_sp_c = x_c[1]  # Threshold of accumulators
@@ -251,6 +252,7 @@ for optimalpoint in range(N_tradeof_points):
             gamma_s = simplex_s[0]  # Regularization hyperparameter
             alpha_sp_s = simplex_s[1]  # Threshold of accumulators
             beta_s = simplex_s[2]  # incrementation step of accumulators
+
             local_avg_s, acc_s, sparse_s = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_s, bias_, gamma_s, alpha_sp_s, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, Y_train, Y_test)
             F_of_x[rep] = 1-local_avg_s
             Accs[rep] = acc_s
