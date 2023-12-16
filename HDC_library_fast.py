@@ -149,8 +149,8 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_, bias_, gamma, alpha_sp, 
         HDC_cont_train_cpy = HDC_cont_train_ * 1
 
         # Apply cyclic accumulation with biases and accumulation speed beta_
-        HDC_cont_train_cpy = (HDC_cont_train_cpy*beta_).astype(np.int16)    # 16 is needed because there could a bias = to 256 or near there that summed would give a wrong value
-        HDC_cont_train_cpy += bias_
+        HDC_cont_train_cpy = (HDC_cont_train_cpy*beta_).astype(np.int8)    # 16 is needed because there could a bias = to 256 or near there that summed would give a wrong value
+        HDC_cont_train_cpy += bias_                                        # not really with 8 bits we have a modulo operation, it's good
         # HDC_cont_train_cpy = np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
         # HDC_cont_train_cpy &= t  # equivalent to np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
         HDC_cont_train_cpy = np.mod(HDC_cont_train_cpy, t_mod)
@@ -172,7 +172,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_, bias_, gamma, alpha_sp, 
         # Apply cyclic accumulation with biases and accumulation speed beta_
         # HDC_cont_test_cpy *= beta_
         # HDC_cont_test_cpy = (HDC_cont_test_cpy+bias_).astype(np.uint8)
-        HDC_cont_test_cpy = (HDC_cont_test_cpy*beta_).astype(np.int16)  # 16 is needed because there could a bias = to 256 or near there that summed would give a wrong value
+        HDC_cont_test_cpy = (HDC_cont_test_cpy*beta_).astype(np.int8)  # 16 is needed because there could a bias = to 256 or near there that summed would give a wrong value
         HDC_cont_test_cpy += bias_
         HDC_cont_test_cpy = np.mod(HDC_cont_test_cpy, t_mod)
         # HDC_cont_test_cpy &= t_mod  # equivalent to np.mod(HDC_cont_train_cpy, 2**B_cnt-1)
