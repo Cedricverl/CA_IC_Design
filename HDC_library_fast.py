@@ -101,12 +101,12 @@ def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
     # Get HDC prototype for class cla, still in floating point (µ)
     final_HDC_centroid = np.dot(Y_train * alpha, HDC_cont_train)
 
-    r_min = -2**(D_b-1)
-    r_max = 2**(D_b-1)-1
+    # r_min = -2**(D_b-1)
+    # r_max = 2**(D_b-1)-1
 
     # Amplification factor for the LS-SVM bias
-    fact = min(abs(r_min/final_HDC_centroid.min()), abs(r_max/final_HDC_centroid.max()))
-
+    # fact = min(abs(r_min/final_HDC_centroid.min()), abs(r_max/final_HDC_centroid.max()))
+    fact = 1
     # Quantize HDC prototype to D_b-bit
     final_HDC_centroid_q = np.round(final_HDC_centroid*fact)
 
@@ -185,8 +185,8 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, beta_, bias_, gamma, alpha_sp, 
         # Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
-        Acc = compute_accuracy(HDC_cont_test_cpy, Y_test, centroids_q, biases_q)
-        sparsity_HDC_centroid = np.array(centroids_q).flatten()
+        Acc = compute_accuracy(HDC_cont_test_cpy, Y_test, centroids, biases)
+        sparsity_HDC_centroid = np.array(centroids).flatten()
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
         # local_avg[trial_] = lambda_1 * Acc + lambda_2 * SPH  # Cost F(x) is defined as 1 - (this quantity)

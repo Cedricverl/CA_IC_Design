@@ -36,11 +36,11 @@ maxval = 256  # The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 100  # HDC hypervector dimension
 portion = 0.6  # We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1  # Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 30  # Number of tradeoff points - use 100 - original: 40
+N_tradeof_points = 100  # Number of tradeoff points - use 100 - original: 40
 N_fine = int(N_tradeof_points*0.4)  # Number of tradeoff points in the "fine-grain" region - use 30
 # Initialize the sparsity-accuracy hyperparameter search
-lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
-lambda_sp = np.concatenate((np.linspace(-1, -0.2, N_fine//2), lambda_fine, np.linspace(0.2, 1, N_fine//2)))
+lambda_fine = np.linspace(-0.4, 0.4, N_tradeof_points-N_fine)
+lambda_sp = np.concatenate((np.linspace(-2, -0.2, N_fine//2), lambda_fine, np.linspace(0.2, 2, N_fine//2)))
 N_tradeof_points = lambda_sp.shape[0]
 
 """
@@ -86,7 +86,7 @@ print("HDC bundling finished...")
 """
 ##################################
 # Nelder-Mead parameters
-NM_iter = 150  # Maximum number of iterations
+NM_iter = 350  # Maximum number of iterations
 STD_EPS = 0.002  # Threshold for early-stopping on standard deviation of the Simplex
 # Contraction, expansion,... coefficients:
 alpha_simp = 1 * 0.5
@@ -161,6 +161,7 @@ for optimalpoint in range(N_tradeof_points):
     for iter_ in range(NM_iter):
         STD_.append(np.std(F_of_x))
         if np.std(F_of_x) < STD_EPS and 100 < iter_:
+            print("NM Stopped early")
             break  # Early-stopping criteria
 
         # 1) sort Accs, Sparsities, F_of_x, Simplex, add best objective to array "objective_"
@@ -169,13 +170,12 @@ for optimalpoint in range(N_tradeof_points):
         Accs = Accs[sort_indices]
         Sparsities = Sparsities[sort_indices]
         Simplex = Simplex[sort_indices]
-
         objective_.append(F_of_x[0])
 
-        # 2) average simplex x_0
+        # Average simplex x_0
         x_0 = np.average(Simplex[:-1], axis=0)
 
-        # 3) Reflexion x_r
+        # Reflexion simplex x_r
         x_r = x_0 + alpha_simp*(x_0-Simplex[-1])
 
         # Evaluate cost of reflected point x_r
@@ -217,8 +217,7 @@ for optimalpoint in range(N_tradeof_points):
                 Sparsities[-1] = sparse_curr
                 continue
 
-      # F_curr >= F_of_x[-2]
-        # 4) Contraction x_c
+        #  Contraction simplex x_c
         flag = None
         x_c = None
         if F_r < F_of_x[-1]:
@@ -243,7 +242,7 @@ for optimalpoint in range(N_tradeof_points):
             Sparsities[-1] = sparse_c
             continue
 
-        # 4) Shrinking
+        # Shrinking
         x1 = Simplex[0]
         for rep in range(1, Simplex.shape[0]):
             simplex_s = x1 + sigma_simp*(Simplex[rep] - x1)

@@ -15,7 +15,7 @@ from matplotlib.ticker import LinearLocator
 from os import mkdir
 plt.close('all')
 
-
+# np.random.seed(seed=69)
 def evaluate_F_of_x(x, y):
     return 0.005*x**4+0.01*x**3-0.4*x**2+11+0.1*y**2
     # return 0.01*(x**2) + 0.01*(y**2)
@@ -25,10 +25,10 @@ NM_iter = 50
 load_simplex = False
 
 # Contraction, expansion,... coefficients:
-alpha_simp = 1#*0.5  # Reflection
-gamma_simp = 2#*0.6  # Expansion
-rho_simp = 0.5  # Contraction
-sigma_simp = 0.5  # Shrink
+alpha_simp = 1*0.5  # Reflection > 0
+gamma_simp = 2*0.6  # Expansion > 1 and gamma > alpha
+rho_simp = 0.5  # Contraction 0 < rho <= 0.5 or 0<rho<1
+sigma_simp = 0.5  # Shrink 0<sigma<1
 
 # Initialize the Simplex or either load a pre-defined one (we will use a pre-defined one in the lab for reproducibility)
 print("Loading simplex")
@@ -37,11 +37,13 @@ if not load_simplex:
     # Simplex = []
     # N_p = 5
     # for ii in range(N_p):
-    #     x_sp = -2.5+(np.random.uniform(0, 1))*5
-    #     y_sp =  5+np.random.uniform(0, 1)*3
+    #     x_sp = np.random.uniform(0, 1)*18-10
+    #     y_sp = np.random.uniform(0, 1)*30-15
+    #     # x_sp = -2.5+(np.random.uniform(0, 1))*5
+    #     # y_sp =  5+np.random.uniform(0, 1)*3
     #     simp_arr = np.array([x_sp, y_sp])
     #     Simplex.append(simp_arr*1)
-    Simplex = np.array([[9,-8], [10, 6], [-10, 6], [-10,-8]])
+    Simplex = np.array([[7,-14], [-9, -14], [-9, 14], [7,14]]).astype(float)
         # np.savez("Simplex_test_np.npz", data = Simplex)
 
 else:
@@ -64,70 +66,80 @@ for init_simp in range(len(Simplex)):
     ##################################
 
 #Transform lists to numpy array:
-F_of_x = np.array(F_of_x)
-Simplex = np.array(Simplex)
+F_of_x = np.array(F_of_x).astype(float)
+Simplex = np.array(Simplex).astype(float)
 
 objective_ = []  # Will contain the objective value F(x) for each simplex as the Nelder-Mead search goes on
 
 # keep track of Simplex in every iteration for plotting purposes
 Simplex_list = [Simplex]
+print("Start NM")
 # For the details about the Nelder-Mead step, please refer to the course notes / reference, we are simply implementing that
 for iter_ in range(NM_iter):
+    print("NM", iter_,"of", NM_iter)
     #  1) Sort Accs, Sparsities, F_of_x, Simplex, add best objective to array "objective_"
     sort_indices = np.argsort(F_of_x)
-
     F_of_x = F_of_x[sort_indices]  # We want to minimise this
     Simplex = Simplex[sort_indices]
     objective_.append(F_of_x[0])
     Simplex_list.append(Simplex)
 
     # 2)Average simplex x_0
-    x_0 = np.average(Simplex[:-1, :], axis=0)  # centroid of all vertices except the last one
-    x_n_plus_1 = Simplex[-1]
+    x_0 = np.average(Simplex[:-1], axis=0)  # centroid of all vertices except the last one
 
-    # Reflexion x_r
-    x_r = x_0 + alpha_simp*(x_0-x_n_plus_1)
+    # Reflection x_r
+
+    x_r = x_0 + alpha_simp*(x_0-Simplex[-1])
 
     # Evaluate cost of reflected point x_r
-    F_curr = evaluate_F_of_x(x_r[0], x_r[1])
+    F_r = evaluate_F_of_x(x_r[0], x_r[1])
 
-    if F_of_x[0] <= F_curr < F_of_x[-2]:
-        F_of_x[-1] = F_curr
+    if F_of_x[0] <= F_r < F_of_x[-2]:
+        print("Reflection")
+        F_of_x[-1] = F_r
         Simplex[-1] = x_r
         continue
 
     # Expansion x_e
-    if F_curr < F_of_x[0]:  # Reflected point is best point so far
-        x_e = x_0 + gamma_simp*(x_0-Simplex[-1])
+    if F_r < F_of_x[0]:  # Reflected point is best point so far
+        print("Expansion")
+        x_e = x_0 + gamma_simp*(x_r-x_0)
 
         # Evaluate cost of reflected point x_e
-        F_exp = evaluate_F_of_x(x_e[0], x_e[1])
+        F_e = evaluate_F_of_x(x_e[0], x_e[1])
 
-        if F_exp < F_curr:
-            F_of_x[-1] = F_exp
+        if F_e < F_r:
+            F_of_x[-1] = F_e
             Simplex[-1] = x_e
             continue
         else:
-            F_of_x[-1] = F_curr
+            F_of_x[-1] = F_r
             Simplex[-1] = x_r
             continue
 
-    # Contraction x_c
-    x_c = x_0 + rho_simp*(x_0 - Simplex[-1])  # Contracted point on the outside
+    flag = None
+    x_c = None
+    if F_r < F_of_x[-1]:  # else shrink
+        x_c = x_0 + rho_simp*(x_r - x_0)
+        flag = 0
+    if F_r >= F_of_x[-1]:
+        x_c = x_0 + rho_simp*(Simplex[-1] - x_0)
+        flag = 1
     F_c = evaluate_F_of_x(x_c[0], x_c[1])
 
-    if F_c < F_of_x[-1]:  # else shrink
+    if (F_c < F_r and flag == 0) or (F_c < F_of_x[-1] and flag == 1):
+        print("Contraction")
         F_of_x[-1] = F_c
         Simplex[-1] = x_c
-        continue  # go to step 1
+        continue
 
     # Shrinking
+    print("Shrinking")
+    x1 = Simplex[0]
     for rep in range(1, Simplex.shape[0]):
-        Simplex[rep] = Simplex[0] + sigma_simp*(Simplex[rep] - Simplex[0])
+        Simplex[rep] = x1 + sigma_simp*(Simplex[rep] - x1)
         F_of_x[rep] = evaluate_F_of_x(Simplex[rep][0], Simplex[rep][1])
 
-
-### plot 3d figure
 # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 fig, ax = plt.subplots()
 lim = 15
